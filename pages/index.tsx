@@ -1,3 +1,4 @@
+// pages/index.tsx
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import UploadCSV from "../components/UploadCSV";
@@ -23,7 +24,6 @@ export default function Home() {
       const raw = localStorage.getItem("txs");
       if (raw) {
         const parsed = JSON.parse(raw) as Transaction[];
-        // basic validation: ensure dates and amounts are present
         const sane = parsed.filter(p => p?.date && typeof p.amount === "number");
         setTransactions(sane);
       }
@@ -46,7 +46,7 @@ export default function Home() {
   const categories = useMemo(() => {
     const set = new Set<string>();
     transactions.forEach(t => {
-      if (t.category) set.add(t.category);
+      if (t.category) set.add(String(t.category).trim());
     });
     return Array.from(set).sort();
   }, [transactions]);
@@ -81,19 +81,39 @@ export default function Home() {
         </div>
         <div className="controls">
           <CurrencyConverter />
+          <button
+            className="btn"
+            onClick={() => {
+              if (!confirm("Clear all uploaded transactions and forecasts?")) return;
+              setTransactions([]);
+              setForecast(null);
+              localStorage.removeItem("txs");
+            }}
+            style={{marginLeft:8}}
+          >
+            Clear data
+          </button>
         </div>
       </div>
 
       <div className="grid">
         <div>
           <div className="card">
-            <UploadCSV onUpload={(rows) => setTransactions(prev => [...rows, ...prev])} />
+            <UploadCSV
+              onUpload={(rows, opts) => {
+                // opts.replace default to true
+                const replace = opts?.replace ?? true;
+                if (replace) setTransactions(rows);
+                else setTransactions(prev => [...rows, ...prev]);
+                // reset any existing forecast because data changed
+                setForecast(null);
+              }}
+            />
             <div style={{height:12}} />
             {/* render transactions only on client to avoid hydration mismatch */}
             {mounted && (
                 <TransactionsTable transactions={transactions} setTransactions={setTransactions} />
             )}
-
           </div>
 
           <div className="card">
@@ -111,7 +131,6 @@ export default function Home() {
             <div style={{minHeight:240}}>
                 {mounted && <ForecastChart forecast={forecast} baseline={dailySeries} loading={loading} />}
             </div>
-
           </div>
 
         </div>
@@ -130,7 +149,6 @@ export default function Home() {
             <div style={{height:12}} />
             {mounted && <GamifiedSavings baselineDailySeries={dailySeries} forecast={forecast} />}
           </div>
-
 
           <div className="card">
             <h3 style={{margin:0}}>Quick tips</h3>
