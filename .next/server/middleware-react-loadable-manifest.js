@@ -1,0 +1,1 @@
+self.__REACT_LOADABLE_MANIFEST="{\"index.tsx -> ../components/ForecastChart\":{\"id\":\"index.tsx -> ../components/ForecastChart\",\"files\":[\"static/chunks/components_ForecastChart_tsx.js\"]}}"
