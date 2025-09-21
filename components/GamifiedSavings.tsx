@@ -67,9 +67,9 @@ export default function GamifiedSavings({
       </div>
       <div style={{ height: 8 }} />
       {GOALS.map((g) => {
-        // pick a base savings to avoid disappearing goals
-        const base = projectedMonthly > 1e-6 ? projectedMonthly : avgMonthly;
-        const months = base > 1e-6 ? Math.ceil(g.cost / base) : Infinity;
+        // Only use projectedMonthly; if it's zero or negative, show dash
+        const months =
+          projectedMonthly > 1e-6 ? Math.ceil(g.cost / projectedMonthly) : Infinity;
 
         return (
           <div key={g.id} className="goal">
