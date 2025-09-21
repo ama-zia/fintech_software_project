@@ -8,17 +8,17 @@ const GOALS = [
   { id: "home", name: "House down payment (starter)", cost: 20000 }
 ];
 
-function computeAvgMonthlyFromSeries(series: Record<string,number>) {
+function computeAvgMonthlyFromSeries(series: Record<string, number>) {
   const dates = Object.keys(series).sort();
   if (dates.length === 0) return 0;
   const values = Object.values(series);
-  const total = values.reduce((a,b)=>a+b,0);
+  const total = values.reduce((a, b) => a + b, 0);
   const minDate = new Date(dates[0]);
-  const maxDate = new Date(dates[dates.length-1]);
+  const maxDate = new Date(dates[dates.length - 1]);
   const months = Math.max(
     1,
     (maxDate.getFullYear() - minDate.getFullYear()) * 12 +
-    (maxDate.getMonth() - minDate.getMonth() + 1)
+      (maxDate.getMonth() - minDate.getMonth() + 1)
   );
   return total / months;
 }
@@ -27,8 +27,8 @@ export default function GamifiedSavings({
   baselineDailySeries,
   forecast
 }: {
-  baselineDailySeries: Record<string,number>,
-  forecast: any
+  baselineDailySeries: Record<string, number>;
+  forecast: any;
 }) {
   // avg monthly from forecast meta or fallback
   const serverAvgMonthly = forecast?.meta?.avgMonthly;
@@ -39,10 +39,11 @@ export default function GamifiedSavings({
 
   // projected monthly from server or fallback to sum of first 30 medians
   const projectedMonthly = useMemo(() => {
-    if (forecast?.meta?.projectedMonthly != null) return forecast.meta.projectedMonthly;
+    if (forecast?.meta?.projectedMonthly != null)
+      return forecast.meta.projectedMonthly;
     if (!forecast || !forecast.points) return avgMonthly;
-    const first30 = forecast.points.slice(0,30);
-    return first30.reduce((s:any,p:any)=>s + (p.median ?? 0), 0); // ✅ no *30
+    const first30 = forecast.points.slice(0, 30);
+    return first30.reduce((s: any, p: any) => s + (p.median ?? 0), 0);
   }, [forecast, avgMonthly]);
 
   const deltaMonthly = projectedMonthly - avgMonthly;
@@ -50,35 +51,44 @@ export default function GamifiedSavings({
   return (
     <div>
       <div className="small">
-        Avg monthly (past): <strong>{Number(avgMonthly || 0).toFixed(2)} USD</strong>
+        Avg monthly (past):{" "}
+        <strong>{Number(avgMonthly || 0).toFixed(2)} USD</strong>
       </div>
       <div className="small">
-        Projected monthly (next month): <strong>{Number(projectedMonthly || 0).toFixed(2)} USD</strong>
+        Projected monthly (next month):{" "}
+        <strong>{Number(projectedMonthly || 0).toFixed(2)} USD</strong>
       </div>
-      <div style={{height:8}} />
+      <div style={{ height: 8 }} />
       <div className="small">
-        <strong>If you increase monthly savings by {Number(deltaMonthly || 0).toFixed(2)} USD:</strong>
+        <strong>
+          If you increase monthly savings by{" "}
+          {Number(deltaMonthly || 0).toFixed(2)} USD:
+        </strong>
       </div>
-      <div style={{height:8}} />
-      {GOALS.map(g => {
-        const months = deltaMonthly > 1e-6 ? Math.ceil(g.cost / deltaMonthly) : Infinity;
+      <div style={{ height: 8 }} />
+      {GOALS.map((g) => {
+        // pick a base savings to avoid disappearing goals
+        const base = projectedMonthly > 1e-6 ? projectedMonthly : avgMonthly;
+        const months = base > 1e-6 ? Math.ceil(g.cost / base) : Infinity;
+
         return (
           <div key={g.id} className="goal">
             <div>
-              <div style={{fontWeight:700}}>{g.name}</div>
+              <div style={{ fontWeight: 700 }}>{g.name}</div>
               <div className="small">{g.cost.toLocaleString()} USD</div>
             </div>
             <div>
-              <div style={{textAlign:"right"}}>
+              <div style={{ textAlign: "right" }}>
                 {Number.isFinite(months) ? `${months} months` : "—"}
               </div>
             </div>
           </div>
         );
       })}
-      <div style={{height:8}} />
+      <div style={{ height: 8 }} />
       <div className="small">
-        Tip: use the Scenario Builder to increase projected monthly savings and re-run forecast.
+        Tip: use the Scenario Builder to increase projected monthly savings and
+        re-run forecast.
       </div>
     </div>
   );

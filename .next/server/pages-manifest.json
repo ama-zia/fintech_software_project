@@ -3,5 +3,6 @@
   "/_app": "pages/_app.js",
   "/_document": "pages/_document.js",
   "/": "pages/index.js",
-  "/api/forecast": "pages/api/forecast.js"
+  "/api/forecast": "pages/api/forecast.js",
+  "/api/convert": "pages/api/convert.js"
 }

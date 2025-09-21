@@ -47,47 +47,63 @@ function randn(mean=0, std=1) {
 }
 
 /**
- * forecast(transactions, options)
- * - transactions: array of transactions (date, amount)
- * - days: how many future days to simulate
- * - scenario: optional multiplier map category->multiplier to modify transactions before forecasting
+ * forecast(transactions, days, scenario)
+ * - transactions: signed amounts (income positive, expenses negative)
+ * - scenario: optional map category -> multiplier (0.0..2.0 etc)
  *
- * returns { points: ForecastPoint[], runs?: number[][], meta: { ... } }
+ * returns { points: ForecastPoint[], meta: { avgMonthly, projectedMonthly, ... } }
  */
 export async function forecast(transactions: Transaction[], days = 365, scenario?: ScenarioDelta) {
-  // 1) apply scenario multipliers (simple category multiplier)
-  const txs = transactions.map(t => {
-        // Ensure all amounts are treated as positive initially for consistency
-        let amount = Math.abs(t.amount);
-        
-        // Apply the scenario delta to the raw amount
-        if (scenario && t.category && (t.category in scenario)) {
-            amount = amount * (scenario[t.category] ?? 1);
-        }
+  // defensive copy / ensure amounts are numbers
+  const txsOriginal = transactions.map(t => ({ ...t, amount: Number(t.amount || 0) }));
 
-        // Treat "Income" or "Salary" as positive, all others as negative
-        const isIncome = t.category && ["Income", "Salary"].includes(t.category);
-        const finalAmount = isIncome ? amount : -amount;
-
-        return { ...t, amount: finalAmount };
-    });
-
-  // compute avgMonthly (past) using min/max dates from txs
+  // ---------- compute historical avgMonthly (baseline) ----------
   let avgMonthly = 0;
-  if (txs.length > 0) {
-    // ensure we parse dates and find min/max
-    const dates = txs.map(t => new Date(t.date));
+  if (txsOriginal.length > 0) {
+    const dates = txsOriginal.map(t => new Date(t.date));
     const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
     const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
-    // months span (inclusive)
     const months = Math.max(1, (maxDate.getFullYear() - minDate.getFullYear()) * 12 + (maxDate.getMonth() - minDate.getMonth() + 1));
-    const total = txs.reduce((s, tx) => s + tx.amount, 0);
+    const total = txsOriginal.reduce((s,t) => s + t.amount, 0);
     avgMonthly = total / months;
   }
 
-  // 2) build daily series map and sort by day
-  const map = buildDailySeriesFromTransactions(txs);
+  // ---------- compute baseline monthly per category (for scenario projection) ----------
+  const monthsSpan = (() => {
+    if (txsOriginal.length === 0) return 1;
+    const dates = txsOriginal.map(t => new Date(t.date));
+    const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+    const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+    return Math.max(1, (maxDate.getFullYear() - minDate.getFullYear()) * 12 + (maxDate.getMonth() - minDate.getMonth() + 1));
+  })();
+
+  const catTotals: Record<string, number> = {};
+  txsOriginal.forEach(t => {
+    const cat = (t.category || "__uncategorized").toString().trim();
+    catTotals[cat] = (catTotals[cat] || 0) + t.amount;
+  });
+  const baselineMonthlyByCategory: Record<string, number> = {};
+  Object.keys(catTotals).forEach(cat => {
+    baselineMonthlyByCategory[cat] = catTotals[cat] / monthsSpan;
+  });
+
+  // projectedMonthly by applying scenario multipliers to baselineMonthlyByCategory
+  const projectedMonthlyByCategory = Object.keys(baselineMonthlyByCategory).reduce((sum, cat) => {
+    const multiplier = scenario && (cat in scenario) ? (scenario as any)[cat] : 1;
+    return sum + baselineMonthlyByCategory[cat] * multiplier;
+  }, 0);
+
+  // ---------- prepare txsAdjusted (apply scenario multipliers to each transaction) ----------
+  // IMPORTANT: do NOT change the sign of t.amount here; CSV should supply signed amounts.
+  const txsAdjusted = txsOriginal.map(t => {
+    const multiplier = scenario && t.category && (t.category in scenario) ? (scenario as any)[t.category] : 1;
+    return { ...t, amount: t.amount * multiplier };
+  });
+
+  // ---------- build daily series from adjusted txs for the chart/model ----------
+  const map = buildDailySeriesFromTransactions(txsAdjusted);
   const dates = Object.keys(map).sort();
+
   // if there's no data, return zeros
   if (dates.length === 0) {
     const points: ForecastPoint[] = [];
@@ -100,10 +116,11 @@ export async function forecast(transactions: Transaction[], days = 365, scenario
     return { points, meta: { notes: "no data", avgMonthly: 0, projectedMonthly: 0 } };
   }
 
-  // convert to arrays for numerical ops
+  // convert to arrays for numerical ops (daily net flows)
   const values = dates.map(d => map[d]);
   const n = values.length;
   const xs = values.map((_,i) => i);
+
   // 3) fit linear regression for trend
   const { slope, intercept } = linearRegression(xs, values);
 
@@ -128,7 +145,7 @@ export async function forecast(transactions: Transaction[], days = 365, scenario
     const pred = intercept + slope * i + weekdayAvg[w];
     residuals.push(values[i] - pred);
   }
-  const residMean = residuals.reduce((a,b)=>a+b,0)/residuals.length;
+  const residMean = residuals.reduce((a,b)=>a+b,0)/Math.max(1,residuals.length);
   const residStd = Math.sqrt(residuals.reduce((a,b)=>a+(b-residMean)*(b-residMean),0)/Math.max(1,residuals.length-1));
 
   // 6) predictive median (deterministic trend+seasonality) + Monte Carlo sims
@@ -145,9 +162,8 @@ export async function forecast(transactions: Transaction[], days = 365, scenario
       futDate.setDate(futDate.getDate() + 1 + i);
       const w = futDate.getDay();
       const seasonal = weekdayAvg[w];
-      // sample residual noise
-     // clamp noise to ±3σ
-     const noise = Math.max(Math.min(randn(residMean, residStd), residStd*3), -residStd*3);
+      // sample residual noise, clamp to ±3σ for stability
+      const noise = Math.max(Math.min(randn(residMean, residStd), residStd*3), -residStd*3);
       run.push(base + seasonal + noise);
     }
     runs.push(run);
@@ -165,10 +181,13 @@ export async function forecast(transactions: Transaction[], days = 365, scenario
     points.push({ date: formatDate(futDate), median, lower, upper });
   }
 
-  // projectedMonthly: average of first 30 median days (if available)
+  // forecast-based projected monthly (MC-driven) — keep for diagnostics
   const first30 = points.slice(0, 30);
-  const dailyAvg = first30.reduce((s,p)=>s + (p.median ?? 0), 0) / first30.length;
-  const projectedMonthly = dailyAvg * 30; // approximate monthly
+  const forecastDailyAvg = first30.length ? (first30.reduce((s,p)=>s + (p.median ?? 0), 0) / first30.length) : 0;
+  const forecastProjectedMonthlyMC = forecastDailyAvg * 30;
+
+  // final projectedMonthly for UI: use category-based projection (stable + responsive to sliders)
+  const projectedMonthly = projectedMonthlyByCategory;
 
   return {
     points,
@@ -178,7 +197,8 @@ export async function forecast(transactions: Transaction[], days = 365, scenario
       residStd,
       residualCount: residuals.length,
       avgMonthly,
-      projectedMonthly
+      projectedMonthly,            // responsive, slider-friendly monthly projection
+      forecastProjectedMonthlyMC   // MC-based monthly (kept for debugging/inspection)
     }
   };
 }
