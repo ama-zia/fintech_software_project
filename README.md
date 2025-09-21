@@ -100,8 +100,8 @@ Supports dozens of currencies (USD, EUR, GBP, CAD, AUD, JPY, INR, etc.).
 1. Clone the repo:
 
     ```Bash
-    git clone <your-repo-url>
-    cd financial-digital-twin
+    git clone (https://github.com/ama-zia/fintech_software_project.git)
+    cd financial_software_project
     
 2. Install dependencies:
 
