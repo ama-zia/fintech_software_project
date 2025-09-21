@@ -20,9 +20,16 @@ This project demonstrates **full-stack engineering**, modular React components, 
 - Example CSV:
   ```csv
   date,amount,description,category
-  2024-01-01,-4.5,Starbucks,Coffee
-  2024-01-02,-30,Groceries,Groceries
+  2024-01-01,-100,Tesco,Shopping
+  2024-01-02,-50,Groceries,Groceries
+  2024-01-03,-20,Bus ticket,Transport
   2024-01-05,2000,Salary,Income
+  2024-01-06,-30,Restaurant,Dining
+  2024-01-07,-100,Rent,Rent
+  2024-01-08,-15,Netflix,Subscriptions
+  2024-01-09,-10,Spotify,Subscriptions
+  2024-01-10,-8,Snacks,Coffee
+
 Negative = spending, Positive = income. Transactions appear in a table where you can edit categories or delete rows.
 
 ### Transactions Table
