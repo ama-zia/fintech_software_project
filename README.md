@@ -15,7 +15,7 @@ This project demonstrates **full-stack engineering**, modular React components, 
 
 ## 🚀 Features
 
-### 📂 Upload CSV Transactions
+### Upload CSV Transactions
 - Drag & drop your CSV or select a file.
 - Example CSV:
   ```csv
@@ -25,12 +25,12 @@ This project demonstrates **full-stack engineering**, modular React components, 
   2024-01-05,2000,Salary,Income
 Negative = spending, Positive = income. Transactions appear in a table where you can edit categories or delete rows.
 
-📊 Transactions Table
+### Transactions Table
 Edit categories inline (e.g., coffee, groceries, rent).
 
 Categories feed directly into the Scenario Builder.
 
-🔮 Forecast
+### Forecast
 Predict your future balance based on past spending.
 
 Median prediction: The most likely outcome.
@@ -41,14 +41,14 @@ Break-even line.
 
 A simple, explainable trend + seasonality model is used for the forecast.
 
-🎛 Scenario Builder
+## Scenario Builder
 Adjust category spending with sliders.
 
 Simulate “what if” scenarios: reduce coffee by 50%, increase rent, etc.
 
 The forecast updates instantly to reflect the new scenario.
 
-🎯 Gamified Savings Goals
+## Gamified Savings Goals
 Predefined goals include:
 
 Laptop ($2000)
@@ -63,7 +63,7 @@ If projected monthly savings are 0 or negative, it shows “—” instead of fa
 
 Updates automatically when scenario sliders are changed.
 
-💱 Currency Converter
+## Currency Converter
 Convert any amount between currencies using live FreeCurrencyAPI rates.
 
 Simple interface:
@@ -71,67 +71,46 @@ Simple interface:
 100 USD → GBP
 Supports dozens of currencies (USD, EUR, GBP, CAD, AUD, JPY, INR, etc.).
 
-🛠 Tech Stack
-Frontend: React + Next.js + TypeScript
+## Tech Stack
+  -Frontend: React + Next.js + TypeScript
+  
+  -Charting: Recharts
+  
+  -CSV parsing: PapaParse
+  
+  -Server-side computation: Next.js API routes
+  
+  -Forecasting logic: Linear trend + weekday seasonality + Monte Carlo simulation (modular TS code)
+  
+  -Styling: CSS with custom variables, clean dashboard layout
+  
+  -Hosting: Ready for Vercel deployment
+  
+  Design Principles:
+  -Type-safe data structures (types.ts)
+  
+  -Modular components (components/)
+  
+  -Clear separation of UI and logic (lib/forecast.ts)
+  
+  -Explainable algorithms (swappable with Prophet/TensorFlow later)
 
-Charting: Recharts
 
-CSV parsing: PapaParse
+### How to Run Locally
+1. Clone the repo:
 
-Server-side computation: Next.js API routes
+    ```Bash
+    git clone <your-repo-url>
+    cd financial-digital-twin
+    
+2. Install dependencies:
 
-Forecasting logic: Linear trend + weekday seasonality + Monte Carlo simulation (modular TS code)
+    ```Bash
+    npm install
 
-Styling: CSS with custom variables, clean dashboard layout
+3. Start development server:
 
-Hosting: Ready for Vercel deployment
-
-Design Principles:
-Type-safe data structures (types.ts)
-
-Modular components (components/)
-
-Clear separation of UI and logic (lib/forecast.ts)
-
-Explainable algorithms (swappable with Prophet/TensorFlow later)
-
-🏗 Project Structure
-financial-digital-twin/
-├── pages/                 # UI screens + API routes
-│   ├── index.tsx          # Main dashboard
-│   ├── _app.tsx           # App wrapper
-│   └── api/
-│       ├── forecast.ts    # Server-side forecasting
-│       └── convert.ts     # Currency API proxy
-├── components/            # Reusable React components
-│   ├── CurrencyConverter.tsx
-│   ├── ForecastChart.tsx
-│   ├── GamifiedSavings.tsx
-│   ├── ScenarioPanel.tsx
-│   └── TransactionsTable.tsx
-├── lib/                   # Forecast engine + helpers
-│   ├── forecast.ts
-│   └── parseCsv.ts
-├── styles/                # CSS styles
-├── types.ts               # TypeScript types
-├── package.json           # Dependencies & scripts
-├── tsconfig.json          # TypeScript settings
-└── next.config.js         # Next.js config
-💻 How to Run Locally
-Clone the repo:
-
-Bash
-
-git clone <your-repo-url>
-cd financial-digital-twin
-Install dependencies:
-
-Bash
-
-npm install
-Start development server:
-
-Bash
-
-npm run dev
+    ```Bash
+    npm run dev
+    
 Open http://localhost:3000 in your browser. Upload a CSV, edit categories, run the forecast, and play with the Scenario Builder and Gamified Savings features.
